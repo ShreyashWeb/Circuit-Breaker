@@ -20,31 +20,41 @@
     <description>Recommendation Service for Axlero CircuitBreaker Project</description>
 
     <properties>
-        <!-- We are using JDK 21 -->
         <java.version>21</java.version>
-
-        <!-- Spring Cloud version compatible with Spring Boot 4.1.x -->
         <spring-cloud.version>2025.1.2</spring-cloud.version>
     </properties>
 
     <dependencies>
 
-        <!-- Spring Web: used to create Recommendation REST APIs -->
+        <!-- Spring Web -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-webmvc</artifactId>
         </dependency>
 
-        <!-- Eureka: registers Recommendation Service with Eureka Server -->
+        <!-- Eureka Discovery Client -->
         <dependency>
             <groupId>org.springframework.cloud</groupId>
             <artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
         </dependency>
 
-        <!-- Actuator: health and monitoring endpoints -->
+        <!-- Actuator -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+
+        <!-- Spring Data JPA -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa</artifactId>
+        </dependency>
+
+        <!-- MySQL Driver -->
+        <dependency>
+            <groupId>com.mysql</groupId>
+            <artifactId>mysql-connector-j</artifactId>
+            <scope>runtime</scope>
         </dependency>
 
         <!-- Testing -->

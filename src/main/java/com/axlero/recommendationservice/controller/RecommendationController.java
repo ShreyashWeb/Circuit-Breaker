@@ -1,13 +1,29 @@
 package com.axlero.recommendationservice.controller;
 
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RestController;
+import com.axlero.recommendationservice.entity.Recommendation;
+import com.axlero.recommendationservice.service.RecommendationService;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
+@RequestMapping("/api/recommendations")
 public class RecommendationController {
 
-    @GetMapping("/recommendations")
-    public String getRecommendations() {
-        return "Top Sellers: Laptop, Smartphone, Headphones";
+    private final RecommendationService service;
+
+    public RecommendationController(RecommendationService service) {
+        this.service = service;
+    }
+
+    @GetMapping
+    public List<Recommendation> getRecommendations() {
+        return service.getAllRecommendations();
+    }
+
+    @PostMapping
+    public Recommendation addRecommendation(
+            @RequestBody Recommendation recommendation) {
+        return service.saveRecommendation(recommendation);
     }
 }
