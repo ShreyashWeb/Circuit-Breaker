@@ -26,4 +26,10 @@ public class RecommendationController {
             @RequestBody Recommendation recommendation) {
         return service.saveRecommendation(recommendation);
     }
+
+    @GetMapping("/delay")
+    public String delay() throws InterruptedException {
+        Thread.sleep(10000);
+        return "Recommendation service is back after delay";
+    }
 }
