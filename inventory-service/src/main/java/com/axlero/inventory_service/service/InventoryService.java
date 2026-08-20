@@ -1,5 +1,24 @@
 package com.axlero.inventory_service.service;
 
+import com.axlero.inventory_service.model.Inventory;
+import com.axlero.inventory_service.repository.InventoryRepository;
+import org.springframework.stereotype.Service;
+
+@Service
 public class InventoryService {
+
+    private final InventoryRepository inventoryRepository;
+
+    public InventoryService(InventoryRepository inventoryRepository) {
+        this.inventoryRepository = inventoryRepository;
+    }
+
+    public Inventory getInventory(Long productId) {
+        return inventoryRepository.findByProductId(productId).orElse(null);
+    }
+
+    public Inventory createInventory(Inventory inventory) {
+        return inventoryRepository.save(inventory);
+    }
 
 }
