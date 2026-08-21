@@ -21,4 +21,13 @@ public class InventoryService {
         return inventoryRepository.save(inventory);
     }
 
+    public Inventory updateInventory(Long productId, Inventory inventory) {
+        Inventory existingInventory = inventoryRepository.findByProductId(productId).orElse(null);
+        if (existingInventory == null) {
+            return null;
+        }
+        existingInventory.setQuantity(inventory.getQuantity());
+        return inventoryRepository.save(existingInventory);
+    }
+
 }
