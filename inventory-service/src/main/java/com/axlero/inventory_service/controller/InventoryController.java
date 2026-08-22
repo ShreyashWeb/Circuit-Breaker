@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.PutMapping;
 
 @RestController
 public class InventoryController {
@@ -26,6 +27,11 @@ public class InventoryController {
     @PostMapping("/inventory")
     public Inventory createInventory(@RequestBody Inventory inventory) {
         return inventoryService.createInventory(inventory);
+    }
+
+    @PutMapping("/inventory/{productId}")
+    public Inventory updateInventory(@PathVariable Long productId, @RequestBody Inventory inventory) {
+        return inventoryService.updateInventory(productId, inventory);
     }
 
 }
