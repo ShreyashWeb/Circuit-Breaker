@@ -30,4 +30,13 @@ public class InventoryService {
         return inventoryRepository.save(existingInventory);
     }
 
+    public boolean deleteInventory(Long productId) {
+        Inventory existingInventory = inventoryRepository.findByProductId(productId).orElse(null);
+        if (existingInventory == null) {
+            return false;
+        }
+        inventoryRepository.delete(existingInventory);
+        return true;
+    }
+
 }

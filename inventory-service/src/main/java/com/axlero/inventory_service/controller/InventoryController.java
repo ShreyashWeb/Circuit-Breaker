@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 
 @RestController
 public class InventoryController {
@@ -32,6 +33,16 @@ public class InventoryController {
     @PutMapping("/inventory/{productId}")
     public Inventory updateInventory(@PathVariable Long productId, @RequestBody Inventory inventory) {
         return inventoryService.updateInventory(productId, inventory);
+    }
+
+    @DeleteMapping("/inventory/{productId}")
+    public String deleteInventory(@PathVariable Long productId) {
+        boolean deleted = inventoryService.deleteInventory(productId);
+        if (deleted) {
+            return "Inventory deleted successfully";
+        } else {
+            return "Inventory not found";
+        }
     }
 
 }
