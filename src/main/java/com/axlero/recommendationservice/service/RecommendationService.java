@@ -22,4 +22,9 @@ public class RecommendationService {
     public Recommendation saveRecommendation(Recommendation recommendation) {
         return repository.save(recommendation);
     }
+
+    public String simulateDelay() throws InterruptedException {
+        Thread.sleep(10000);
+        return "Recommendation service is back after delay";
+    }
 }

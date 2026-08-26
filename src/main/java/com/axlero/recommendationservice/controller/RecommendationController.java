@@ -29,7 +29,6 @@ public class RecommendationController {
 
     @GetMapping("/delay")
     public String delay() throws InterruptedException {
-        Thread.sleep(10000);
-        return "Recommendation service is back after delay";
+        return service.simulateDelay();
     }
 }
