@@ -1,109 +1,98 @@
 import React from 'react';
 import CircuitBreakerBadge from '../components/CircuitBreakerBadge';
-import { History as HistoryIcon, Clock, ArrowRight } from 'lucide-react';
-
-const mockTransitions = [
-  {
-    id: 1,
-    serviceName: 'product-service',
-    fromState: 'HALF_OPEN',
-    toState: 'CLOSED',
-    timestamp: '2026-08-20 22:10:00',
-    reason: 'Success rate exceeded 95% during test period',
-  },
-  {
-    id: 2,
-    serviceName: 'inventory-service',
-    fromState: 'CLOSED',
-    toState: 'OPEN',
-    timestamp: '2026-08-20 22:05:00',
-    reason: 'HTTP 5xx error rate exceeded threshold (50.5% errors)',
-  },
-  {
-    id: 3,
-    serviceName: 'recommendation-service',
-    fromState: 'OPEN',
-    toState: 'HALF_OPEN',
-    timestamp: '2026-08-20 21:55:00',
-    reason: 'Wait duration of 60 seconds elapsed, initiating trial requests',
-  },
-  {
-    id: 4,
-    serviceName: 'product-service',
-    fromState: 'CLOSED',
-    toState: 'OPEN',
-    timestamp: '2026-08-20 20:30:15',
-    reason: 'Failure rate threshold reached: 10 consecutive connection timeouts',
-  },
-];
+import { History as HistoryIcon, Clock, Trash2, ArrowRightLeft, FileCode2 } from 'lucide-react';
+import useCircuitBreakerHistory from '../hooks/useCircuitBreakerHistory';
 
 export const History = () => {
+  const { history, clearHistory } = useCircuitBreakerHistory();
+
   return (
     <div className="space-y-8 animate-fadeIn">
       {/* Page Header */}
-      <div>
-        <h1 className="text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
-          State Transition History
-        </h1>
-        <p className="mt-2 text-sm text-slate-400">
-          Chronological log of service circuit breaker state adjustments and incident thresholds.
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
+            State Transition History
+          </h1>
+          <p className="mt-2 text-sm text-slate-400">
+            Chronological log of service circuit breaker state adjustments and incident thresholds.
+          </p>
+        </div>
+
+        {history.length > 0 && (
+          <button
+            onClick={clearHistory}
+            className="flex items-center space-x-1.5 text-xs bg-rose-500/10 border border-rose-500/20 hover:bg-rose-500 hover:text-white text-rose-400 font-semibold px-3 py-2 rounded-lg cursor-pointer transition-all duration-300 self-start sm:self-center"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+            <span>Clear Transition Logs</span>
+          </button>
+        )}
       </div>
 
-      {/* History Timeline */}
+      {/* History Log Container */}
       <div className="bg-slate-900/40 border border-slate-900 rounded-2xl p-6 md:p-8 backdrop-blur-md">
         <div className="flex items-center space-x-2 text-slate-200 font-semibold text-lg mb-6 border-b border-slate-805 pb-4">
           <HistoryIcon className="h-5 w-5 text-indigo-400" />
-          <span>Transition Events</span>
+          <span>Transition Events ({history.length})</span>
         </div>
 
-        <div className="flow-root">
-          <ul className="-mb-8">
-            {mockTransitions.map((event, eventIdx) => (
-              <li key={event.id}>
-                <div className="relative pb-8">
-                  {/* Vertical line connecting events */}
-                  {eventIdx !== mockTransitions.length - 1 ? (
-                    <span
-                      className="absolute top-5 left-5 -ml-px h-full w-0.5 bg-slate-800"
-                      aria-hidden="true"
-                    />
-                  ) : null}
-                  <div className="relative flex items-start space-x-4">
-                    {/* Timestamp icon bullet */}
-                    <div className="relative flex-shrink-0">
-                      <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-900 border border-slate-800 text-slate-400 group-hover:border-indigo-500/30 transition-colors">
-                        <Clock className="h-5 w-5 text-slate-500" />
+        {history.length === 0 ? (
+          /* Friendly Empty State */
+          <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
+            <div className="p-4 bg-slate-900 border border-slate-800 rounded-2xl text-slate-500 mb-4 shadow-xl">
+              <HistoryIcon className="h-10 w-10 text-slate-600 animate-pulse" />
+            </div>
+            <h3 className="text-lg font-bold text-slate-200">No transitions logged yet</h3>
+            <p className="mt-2 text-sm text-slate-400 max-w-sm">
+              Circuit breakers are currently stable. Try turning on <strong className="text-indigo-400">Simulation Mode</strong> on the Dashboard or trigger failures in your backend services to record transitions.
+            </p>
+          </div>
+        ) : (
+          /* Transition Table */
+          <div className="overflow-x-auto -mx-6 md:mx-0">
+            <table className="w-full text-left border-collapse text-sm">
+              <thead>
+                <tr className="border-b border-slate-800 text-slate-500 uppercase tracking-wider font-mono text-[10px] font-semibold">
+                  <th className="py-3 px-4 sm:px-6">Time</th>
+                  <th className="py-3 px-4 sm:px-6">Service</th>
+                  <th className="py-3 px-4 sm:px-6">Previous State</th>
+                  <th className="py-3 px-4 sm:px-6 text-center w-8"></th>
+                  <th className="py-3 px-4 sm:px-6">New State</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-900/60">
+                {history.map((event) => (
+                  <tr 
+                    key={event.id} 
+                    className="hover:bg-slate-900/20 transition-colors duration-150 text-slate-300"
+                  >
+                    <td className="py-4 px-4 sm:px-6 font-mono text-xs text-slate-400 flex items-center space-x-2">
+                      <Clock className="h-3.5 w-3.5 text-slate-600 flex-shrink-0" />
+                      <span>{event.timestamp}</span>
+                    </td>
+                    <td className="py-4 px-4 sm:px-6 font-bold text-slate-200">
+                      {event.serviceName}
+                    </td>
+                    <td className="py-4 px-4 sm:px-6">
+                      <span className="scale-95 origin-left inline-block">
+                        <CircuitBreakerBadge state={event.previousState} />
                       </span>
-                    </div>
-
-                    {/* Transition Content */}
-                    <div className="min-w-0 flex-1 py-1.5">
-                      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
-                        <div>
-                          <span className="font-bold text-slate-200 text-base">{event.serviceName}</span>
-                          <div className="mt-1 flex items-center space-x-2 text-sm">
-                            <span className="text-slate-500">State Transitioned:</span>
-                            <span className="opacity-70 scale-90 inline-block transform"><CircuitBreakerBadge state={event.fromState} /></span>
-                            <ArrowRight className="h-3 w-3 text-slate-500" />
-                            <span className="scale-90 inline-block transform"><CircuitBreakerBadge state={event.toState} /></span>
-                          </div>
-                        </div>
-                        <div className="text-xs text-slate-500 font-mono flex items-center gap-1.5 self-start md:self-center">
-                          <span>{event.timestamp}</span>
-                        </div>
-                      </div>
-                      <p className="mt-2 text-sm text-slate-400 bg-slate-950/40 p-3 rounded-lg border border-slate-900/50">
-                        <span className="font-semibold text-slate-500 text-xs uppercase tracking-wider block mb-1">Reason:</span>
-                        {event.reason}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </div>
+                    </td>
+                    <td className="py-4 px-4 sm:px-6 text-center text-slate-600">
+                      <ArrowRightLeft className="h-3.5 w-3.5" />
+                    </td>
+                    <td className="py-4 px-4 sm:px-6">
+                      <span className="scale-100 origin-left inline-block">
+                        <CircuitBreakerBadge state={event.newState} />
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );

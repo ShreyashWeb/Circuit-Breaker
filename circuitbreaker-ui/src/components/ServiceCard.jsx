@@ -1,5 +1,6 @@
 import React from 'react';
 import CircuitBreakerBadge from './CircuitBreakerBadge';
+import LatencyChart from './LatencyChart';
 
 /**
  * ServiceCard component
@@ -7,6 +8,7 @@ import CircuitBreakerBadge from './CircuitBreakerBadge';
  * - Service name
  * - Health status (UP/DOWN/UNKNOWN) indicated by a colored dot
  * - Circuit breaker state badge
+ * - Latency trend line chart (last 20 readings)
  * - Last checked timestamp
  * 
  * @param {Object} props
@@ -14,8 +16,9 @@ import CircuitBreakerBadge from './CircuitBreakerBadge';
  * @param {'UP' | 'DOWN' | 'UNKNOWN'} props.status
  * @param {string} props.lastChecked
  * @param {'CLOSED' | 'OPEN' | 'HALF_OPEN'} props.circuitBreakerState
+ * @param {Array<{time: string, latency: number}>} props.latencyHistory
  */
-export const ServiceCard = ({ serviceName, status, lastChecked, circuitBreakerState }) => {
+export const ServiceCard = ({ serviceName, status, lastChecked, circuitBreakerState, latencyHistory }) => {
   const normalizedStatus = (status || '').toUpperCase();
 
   // Determine health dot classes
@@ -34,7 +37,7 @@ export const ServiceCard = ({ serviceName, status, lastChecked, circuitBreakerSt
   }
 
   return (
-    <div className="bg-slate-900/60 border border-slate-800 hover:border-indigo-500/30 rounded-2xl p-6 shadow-2xl backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:shadow-indigo-500/5 flex flex-col justify-between h-48 relative overflow-hidden group">
+    <div className="bg-slate-900/60 border border-slate-800 hover:border-indigo-500/30 rounded-2xl p-6 shadow-2xl backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:shadow-indigo-500/5 flex flex-col justify-between min-h-[380px] h-auto relative overflow-hidden group">
       {/* Background glow on hover */}
       <div className="absolute -inset-px bg-gradient-to-r from-indigo-500/10 to-purple-500/10 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
 
@@ -58,6 +61,11 @@ export const ServiceCard = ({ serviceName, status, lastChecked, circuitBreakerSt
             Status: <span className={`font-semibold ${textStatusColor}`}>{statusText}</span>
           </span>
         </div>
+      </div>
+
+      {/* Latency History Chart */}
+      <div className="flex-grow">
+        <LatencyChart serviceName={serviceName} data={latencyHistory} />
       </div>
 
       {/* Footer detailing the last checked time */}
