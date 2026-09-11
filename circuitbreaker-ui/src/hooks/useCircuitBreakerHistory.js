@@ -2,7 +2,8 @@ import { useState, useCallback } from 'react';
 
 /**
  * Custom hook useCircuitBreakerHistory
- * Manages the state transition history of circuit breakers, persisting to localStorage.
+ * Manages the state transition history of circuit breakers, persisting to localStorage
+ * and broadcasting state transitions to listeners (such as toast notifications).
  */
 export const useCircuitBreakerHistory = () => {
   const [history, setHistory] = useState(() => {
@@ -17,7 +18,7 @@ export const useCircuitBreakerHistory = () => {
 
   const recordTransition = useCallback((serviceName, previousState, newState) => {
     // If the states are identical, do not record a transition
-    if (previousState === newState) return;
+    if (!serviceName || !newState || previousState === newState) return;
 
     const timestamp = new Date().toLocaleString(undefined, {
       year: 'numeric',
@@ -27,7 +28,7 @@ export const useCircuitBreakerHistory = () => {
       minute: '2-digit',
       second: '2-digit',
       hour12: false
-    }).replace(/\//g, '-'); // Format nicely as YYYY-MM-DD HH:MM:SS (or local style)
+    }).replace(/\//g, '-');
 
     const newEntry = {
       id: `${serviceName}-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
@@ -46,6 +47,20 @@ export const useCircuitBreakerHistory = () => {
       }
       return updated;
     });
+
+    // Broadcast event for Toast notifications
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(
+        new CustomEvent('cb-history-state-change', {
+          detail: {
+            serviceName,
+            previousState,
+            newState,
+            timestamp,
+          },
+        })
+      );
+    }
   }, []);
 
   const clearHistory = useCallback(() => {

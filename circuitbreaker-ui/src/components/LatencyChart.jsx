@@ -2,6 +2,23 @@ import React from 'react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 
 /**
+ * Custom Tooltip component for dark theme consistency
+ */
+const CustomTooltip = ({ active, payload }) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-slate-900 border border-slate-800 px-3 py-2 rounded-lg shadow-xl backdrop-blur-md">
+        <p className="text-xs text-slate-500 font-mono mb-0.5">{payload[0].payload.time}</p>
+        <p className="text-sm font-semibold text-slate-200">
+          Latency: <span className="text-indigo-400 font-mono">{payload[0].value} ms</span>
+        </p>
+      </div>
+    );
+  }
+  return null;
+};
+
+/**
  * LatencyChart component
  * Renders a premium, dark-themed line/area chart showing service latency trends over the last 20 polls.
  * 
@@ -12,21 +29,6 @@ import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianG
 export const LatencyChart = ({ serviceName, data }) => {
   // Safe fallback if data is not provided or empty
   const chartData = data || [];
-
-  // Custom Tooltip component for dark theme consistency
-  const CustomTooltip = ({ active, payload }) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-slate-900 border border-slate-800 px-3 py-2 rounded-lg shadow-xl backdrop-blur-md">
-          <p className="text-xs text-slate-500 font-mono mb-0.5">{payload[0].payload.time}</p>
-          <p className="text-sm font-semibold text-slate-200">
-            Latency: <span className="text-indigo-400 font-mono">{payload[0].value} ms</span>
-          </p>
-        </div>
-      );
-    }
-    return null;
-  };
 
   return (
     <div className="w-full h-32 mt-4 select-none">
