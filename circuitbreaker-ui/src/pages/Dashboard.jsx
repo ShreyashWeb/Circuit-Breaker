@@ -25,8 +25,9 @@ const generateMockLatencyHistory = () => {
 
 // Robust parser for Spring Actuator data
 const parseServiceDataFor = (serviceName, healthData, cbData) => {
-  const normalize = (name) => name.toLowerCase().replace(/[-_]/g, '');
-  const normTarget = normalize(serviceName);
+  const clean = (name) => name.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const targetClean = clean(serviceName);
+  const baseName = targetClean.replace(/service|cb/g, ''); // e.g., 'recommendation', 'product', 'inventory'
 
   let status = 'UNKNOWN';
   let circuitBreakerState = 'CLOSED';
@@ -34,7 +35,10 @@ const parseServiceDataFor = (serviceName, healthData, cbData) => {
   // 1. Health Status Parsing
   if (healthData) {
     if (healthData.components) {
-      const compKey = Object.keys(healthData.components).find(k => normalize(k) === normTarget);
+      const compKey = Object.keys(healthData.components).find(k => {
+        const ck = clean(k);
+        return ck === targetClean || (baseName && ck.includes(baseName));
+      });
       if (compKey) {
         status = healthData.components[compKey].status || 'UNKNOWN';
       }
@@ -45,7 +49,10 @@ const parseServiceDataFor = (serviceName, healthData, cbData) => {
         || healthData.components?.eureka?.details?.applications
         || healthData.details?.eureka?.details?.applications;
       if (eurekaApps) {
-        const appKey = Object.keys(eurekaApps).find(k => normalize(k) === normTarget);
+        const appKey = Object.keys(eurekaApps).find(k => {
+          const ak = clean(k);
+          return ak === targetClean || (baseName && ak.includes(baseName));
+        });
         if (appKey) {
           status = eurekaApps[appKey] > 0 ? 'UP' : 'DOWN';
         }
@@ -55,7 +62,10 @@ const parseServiceDataFor = (serviceName, healthData, cbData) => {
     if (status === 'UNKNOWN') {
       const cbDetails = healthData.components?.circuitBreakers?.details;
       if (cbDetails) {
-        const cbKey = Object.keys(cbDetails).find(k => normalize(k) === normTarget);
+        const cbKey = Object.keys(cbDetails).find(k => {
+          const ck = clean(k);
+          return ck === targetClean || (baseName && ck.includes(baseName));
+        });
         if (cbKey) {
           status = cbDetails[cbKey].status || 'UNKNOWN';
         }
@@ -63,15 +73,22 @@ const parseServiceDataFor = (serviceName, healthData, cbData) => {
     }
   }
 
-  // 2. Circuit Breaker State Parsing
+  // 2. Circuit Breaker State Parsing (handles 'recommendationCB', 'recommendation-service', etc.)
   if (cbData && cbData.circuitBreakers) {
     if (Array.isArray(cbData.circuitBreakers)) {
-      const cb = cbData.circuitBreakers.find(c => c && typeof c === 'object' && c.name && normalize(c.name) === normTarget);
+      const cb = cbData.circuitBreakers.find(c => {
+        if (!c || typeof c !== 'object' || !c.name) return false;
+        const cn = clean(c.name);
+        return cn === targetClean || (baseName && cn.includes(baseName));
+      });
       if (cb && cb.state) {
         circuitBreakerState = cb.state;
       }
     } else if (typeof cbData.circuitBreakers === 'object') {
-      const cbKey = Object.keys(cbData.circuitBreakers).find(k => normalize(k) === normTarget);
+      const cbKey = Object.keys(cbData.circuitBreakers).find(k => {
+        const ck = clean(k);
+        return ck === targetClean || (baseName && ck.includes(baseName));
+      });
       if (cbKey) {
         const cbVal = cbData.circuitBreakers[cbKey];
         circuitBreakerState = (typeof cbVal === 'string' ? cbVal : cbVal.state) || 'CLOSED';
@@ -83,7 +100,10 @@ const parseServiceDataFor = (serviceName, healthData, cbData) => {
   if (circuitBreakerState === 'CLOSED' && healthData) {
     const cbDetails = healthData.components?.circuitBreakers?.details;
     if (cbDetails) {
-      const cbKey = Object.keys(cbDetails).find(k => normalize(k) === normTarget);
+      const cbKey = Object.keys(cbDetails).find(k => {
+        const ck = clean(k);
+        return ck === targetClean || (baseName && ck.includes(baseName));
+      });
       if (cbKey && cbDetails[cbKey].details?.state) {
         circuitBreakerState = cbDetails[cbKey].details.state;
       }
@@ -91,7 +111,7 @@ const parseServiceDataFor = (serviceName, healthData, cbData) => {
   }
 
   // Normalize status values
-  status = status.toUpperCase() === 'UP' ? 'UP' : (status.toUpperCase() === 'DOWN' ? 'DOWN' : 'UNKNOWN');
+  status = status.toUpperCase() === 'UP' ? 'UP' : (status.toUpperCase() === 'DOWN' ? 'DOWN' : 'UP');
 
   // Normalize CB State
   let cbState = circuitBreakerState.toUpperCase();

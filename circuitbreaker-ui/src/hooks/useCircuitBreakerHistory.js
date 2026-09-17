@@ -1,20 +1,37 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
+
+const getStoredHistory = () => {
+  try {
+    const saved = localStorage.getItem('cb_history');
+    return saved ? JSON.parse(saved) : [];
+  } catch (e) {
+    console.error('Failed to parse circuit breaker history from localStorage', e);
+    return [];
+  }
+};
 
 /**
  * Custom hook useCircuitBreakerHistory
  * Manages the state transition history of circuit breakers, persisting to localStorage
- * and broadcasting state transitions to listeners (such as toast notifications).
+ * and broadcasting state transitions to listeners (such as toast notifications and history table).
  */
 export const useCircuitBreakerHistory = () => {
-  const [history, setHistory] = useState(() => {
-    try {
-      const saved = localStorage.getItem('cb_history');
-      return saved ? JSON.parse(saved) : [];
-    } catch (e) {
-      console.error('Failed to parse circuit breaker history from localStorage', e);
-      return [];
-    }
-  });
+  const [history, setHistory] = useState(getStoredHistory);
+
+  // Sync state whenever localStorage or broadcast event fires
+  useEffect(() => {
+    const handleUpdate = () => {
+      setHistory(getStoredHistory());
+    };
+
+    window.addEventListener('storage', handleUpdate);
+    window.addEventListener('cb-history-state-change', handleUpdate);
+
+    return () => {
+      window.removeEventListener('storage', handleUpdate);
+      window.removeEventListener('cb-history-state-change', handleUpdate);
+    };
+  }, []);
 
   const recordTransition = useCallback((serviceName, previousState, newState) => {
     // If the states are identical, do not record a transition
