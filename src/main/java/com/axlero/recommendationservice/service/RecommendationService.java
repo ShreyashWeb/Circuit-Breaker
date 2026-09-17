@@ -27,4 +27,8 @@ public class RecommendationService {
         Thread.sleep(10000);
         return "Recommendation service is back after delay";
     }
+
+    public String simulateFailure() {
+        throw new RuntimeException("Recommendation service is temporarily unavailable");
+    }
 }

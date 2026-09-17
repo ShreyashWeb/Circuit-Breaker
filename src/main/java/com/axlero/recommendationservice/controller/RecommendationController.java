@@ -31,4 +31,9 @@ public class RecommendationController {
     public String delay() throws InterruptedException {
         return service.simulateDelay();
     }
+
+    @GetMapping("/failure")
+    public String failure() {
+        return service.simulateFailure();
+    }
 }
