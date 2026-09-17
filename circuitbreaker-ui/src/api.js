@@ -26,11 +26,30 @@ export const getCircuitBreakerStates = () => {
 
 /**
  * Trigger latency injection for a specific microservice (Chaos engineering)
- * POSTs to /chaos/latency/{serviceName}
+ * Calls /chaos/latency/{serviceName} on Gateway and direct delayed route to trip Resilience4j CB.
  * @param {string} serviceName - e.g. 'recommendation-service', 'product-service', 'inventory-service'
  */
-export const triggerLatency = (serviceName) => {
-  return api.post(`/chaos/latency/${encodeURIComponent(serviceName)}`);
+export const triggerLatency = async (serviceName) => {
+  const norm = (serviceName || '').toLowerCase();
+  
+  // Call chaos endpoint on Gateway
+  try {
+    return await api.post(`/chaos/latency/${encodeURIComponent(serviceName)}`);
+  } catch {
+    // Direct fallback if chaos controller isn't ready: fire delayed calls through Gateway
+    if (norm.includes('recommendation')) {
+      const requests = Array.from({ length: 6 }, () =>
+        api.get('/api/recommendations/delay', { timeout: 6000 }).catch(err => err.response || err)
+      );
+      return Promise.all(requests);
+    } else if (norm.includes('inventory')) {
+      const requests = Array.from({ length: 6 }, () =>
+        api.get('/inventory/simulate/delay?durationMs=4000', { timeout: 6000 }).catch(err => err.response || err)
+      );
+      return Promise.all(requests);
+    }
+    throw new Error(`Latency simulation for ${serviceName} not supported.`);
+  }
 };
 
 export default api;
