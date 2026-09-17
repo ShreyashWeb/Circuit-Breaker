@@ -1,21 +1,45 @@
-# 🛡️ Circuit Breaker Monitoring Dashboard
+# Circuit Breaker Monitoring Dashboard
 
-A real-time, dark-mode React frontend for monitoring microservice resilience patterns built with **Spring Cloud Gateway**, **Resilience4j**, and **Netflix Eureka**.
+> A real-time, dark-mode React dashboard for visualizing microservice resilience patterns powered by **Spring Cloud Gateway**, **Resilience4j**, and **Netflix Eureka**.
 
 ---
 
-## 🌐 Live Eureka Service Discovery
+## Table of Contents
 
-The Eureka Service Registry is deployed and active on Render:
+- [Overview](#overview)
+- [Live Deployment](#live-deployment)
+- [Tech Stack](#tech-stack)
+- [Getting Started](#getting-started)
+- [Project Structure](#project-structure)
+- [Component Reference](#component-reference)
+- [API Endpoints](#api-endpoints)
+- [Circuit Breaker States](#circuit-breaker-states)
+- [Simulation Mode](#simulation-mode)
 
-- **Eureka Dashboard:** [https://circuit-breaker-s6d7.onrender.com](https://circuit-breaker-s6d7.onrender.com)
-- **Eureka Service URL (for microservices):** `https://circuit-breaker-s6d7.onrender.com/eureka/`
+---
 
-### ⚙️ Microservice Configuration (`application.properties`)
-Add the following to each Spring Boot microservice (`product-service`, `inventory-service`, `recommendation-service`, and `api-gateway`):
+## Overview
+
+The Circuit Breaker Dashboard provides live observability into a fleet of Spring Boot microservices. It polls the API Gateway every **3 seconds** to surface:
+
+- Per-service health status and circuit breaker state (`CLOSED` / `OPEN` / `HALF_OPEN`)
+- Live latency trend charts (last 20 readings per service)
+- Fallback UI activation when a circuit trips open
+- A chronological state-transition history log with localStorage persistence
+- On-demand **latency injection** for chaos engineering demos
+
+---
+
+## Live Deployment
+
+| Service | URL |
+| :--- | :--- |
+| **Eureka Dashboard** | [https://circuit-breaker-s6d7.onrender.com](https://circuit-breaker-s6d7.onrender.com) |
+| **Eureka Service URL** | `https://circuit-breaker-s6d7.onrender.com/eureka/` |
+
+To register a Spring Boot microservice with the hosted registry, add the following to its `application.properties`:
 
 ```properties
-# Eureka Client Configuration
 eureka.client.service-url.defaultZone=https://circuit-breaker-s6d7.onrender.com/eureka/
 eureka.client.register-with-eureka=true
 eureka.client.fetch-registry=true
@@ -23,71 +47,124 @@ eureka.client.fetch-registry=true
 
 ---
 
-## 🚀 Quick Start (Frontend)
+## Tech Stack
 
-### 1. Installation
-Navigate to the `circuitbreaker-ui` directory and install dependencies:
+| Layer | Technology |
+| :--- | :--- |
+| Framework | React 19 + Vite 8 |
+| Routing | React Router DOM v7 |
+| HTTP Client | Axios |
+| Charts | Recharts |
+| Icons | Lucide React |
+| Styling | Tailwind CSS v4 |
+| Linting | OXLint |
+
+---
+
+## Getting Started
+
+### 1. Install dependencies
+
 ```bash
+cd circuitbreaker-ui
 npm install
 ```
 
-### 2. Environment Configuration
-Copy the example environment file and configure your API Gateway URL:
+### 2. Configure environment
+
 ```bash
 cp .env.example .env
 ```
-Default `.env` configuration:
+
+Edit `.env` to point to your running API Gateway:
+
 ```env
 VITE_API_BASE_URL=http://localhost:8080
 ```
 
-### 3. Running Locally
-Start the Vite development server:
+### 3. Start the dev server
+
 ```bash
 npm run dev
 ```
-Open your browser at `http://localhost:5173`.
 
-### 4. Production Build
+Open [http://localhost:5173](http://localhost:5173) in your browser.
+
+### 4. Build for production
+
 ```bash
 npm run build
 ```
 
+The compiled output is placed in `dist/`.
+
 ---
 
-## 📡 Backend Endpoints
+## Project Structure
 
-The frontend connects to the Spring Cloud API Gateway at `VITE_API_BASE_URL` (default: `http://localhost:8080`) using the following endpoints:
+```
+circuitbreaker-ui/
+├── public/
+├── src/
+│   ├── api.js                          # Axios client + all API calls
+│   ├── components/
+│   │   ├── CircuitBreakerBadge.jsx     # State badge (CLOSED / OPEN / HALF_OPEN)
+│   │   ├── FallbackPanel.jsx           # Fallback notice shown when circuit is OPEN
+│   │   ├── LatencyChart.jsx            # Recharts area chart (last 20 readings)
+│   │   ├── Navbar.jsx                  # Top navigation bar
+│   │   ├── ServiceCard.jsx             # Per-service monitoring card
+│   │   └── Toast.jsx                   # Transition toast notifications
+│   ├── hooks/
+│   │   └── useCircuitBreakerHistory.js # State-transition history hook
+│   └── pages/
+│       ├── Dashboard.jsx               # Main monitoring page
+│       └── History.jsx                 # Transition log page
+├── .env.example
+├── index.html
+├── package.json
+└── vite.config.js
+```
+
+---
+
+## Component Reference
+
+| Component | Description |
+| :--- | :--- |
+| `Navbar` | Sticky top bar with branding, tab-based routing, and a direct link to the live Eureka dashboard. |
+| `Dashboard` | Main view — summary stat cards, simulation toggle, live polling every 3 s, and the responsive service fleet grid. |
+| `ServiceCard` | Per-service card showing health status, circuit breaker badge, fallback panel, latency chart, and the **Trigger Latency** chaos button. |
+| `CircuitBreakerBadge` | Animated badge with a pulsing dot. Renders emerald for `CLOSED`, rose for `OPEN`, and amber for `HALF_OPEN`. |
+| `FallbackPanel` | Notice that appears on a `ServiceCard` only when the circuit breaker is `OPEN` — displays *"Serving cached fallback: Top Sellers"*. |
+| `LatencyChart` | Responsive Recharts area chart showing the last 20 latency readings with an average overlay and tooltip. |
+| `Toast` | Corner toast notification that broadcasts `<service> is now <state>` on every state transition and auto-dismisses after 4 s. |
+| `History` | Chronological log table of all state transitions, with timestamps and a clear action. Backed by `localStorage`. |
+| `useCircuitBreakerHistory` | Custom React hook that records transition events, persists them to `localStorage`, and broadcasts them to subscribers. |
+
+---
+
+## API Endpoints
+
+All requests are made to `VITE_API_BASE_URL` (default: `http://localhost:8080`).
 
 | Endpoint | Method | Purpose |
 | :--- | :--- | :--- |
-| `/actuator/health` | `GET` | Aggregated service health and Eureka discovery status |
-| `/actuator/circuitbreakers` | `GET` | Resilience4j circuit breaker states for registered services |
-| `/chaos/latency/{serviceName}` | `POST` | Injects deliberate delay/latency for chaos engineering demonstrations |
-
-> **Tip:** If the gateway is not yet running or during local UI review, toggle **Simulation Mode** in the header to preview state transitions, live latency charts, and fallback UI displays.
+| `/actuator/health` | `GET` | Aggregated health status and Eureka discovery info |
+| `/actuator/circuitbreakers` | `GET` | Resilience4j circuit breaker states for all registered services |
+| `/chaos/latency/{serviceName}` | `POST` | Injects deliberate latency for chaos engineering demos |
 
 ---
 
-## 🧩 Component Architecture
+## Circuit Breaker States
 
-| Component | File Path | Description |
+| State | Indicator | Behaviour |
 | :--- | :--- | :--- |
-| **`Navbar`** | `src/components/Navbar.jsx` | Sticky navigation bar with branding, tab routing, and direct link to the live Render Eureka dashboard. |
-| **`Dashboard`** | `src/pages/Dashboard.jsx` | Main monitoring view displaying summary statistics cards, simulation toggle, live polling (3s interval), and the responsive microservice fleet grid. |
-| **`ServiceCard`** | `src/components/ServiceCard.jsx` | Dedicated card for each microservice (`product-service`, `inventory-service`, `recommendation-service`), showing health status, circuit breaker badge, fallback panel, latency history chart, and the **Trigger Latency** button. |
-| **`CircuitBreakerBadge`** | `src/components/CircuitBreakerBadge.jsx` | State indicator badge with pulsing dot and smooth CSS transitions representing `CLOSED` (emerald), `OPEN` (rose), and `HALF_OPEN` (amber) states. |
-| **`FallbackPanel`** | `src/components/FallbackPanel.jsx` | Notice panel appearing on a `ServiceCard` exclusively when its circuit breaker state is `OPEN`, showing *"Serving cached fallback: Top Sellers"*. |
-| **`LatencyChart`** | `src/components/LatencyChart.jsx` | Responsive area chart using Recharts visualizing the last 20 latency readings with average latency and tooltips. |
-| **`ToastContainer` / `Toast`** | `src/components/Toast.jsx` | Lightweight toast notification floating in the corner, broadcasting `<service> is now <state>` on every transition and auto-dismissing after 4 seconds. |
-| **`History`** | `src/pages/History.jsx` | Chronological transition log table recording state changes, timestamps, and service transitions with localStorage persistence and clear actions. |
-| **`useCircuitBreakerHistory`** | `src/hooks/useCircuitBreakerHistory.js` | Custom React hook managing transition event logging, localStorage persistence, and event broadcasting. |
-| **`api.js`** | `src/api.js` | Centralized Axios HTTP client configuring `VITE_API_BASE_URL` with health, circuit breaker, and chaos latency injection functions. |
+| 🟢 **CLOSED** | Emerald badge | Normal operation — requests flow through to downstream services. |
+| 🔴 **OPEN** | Rose badge | Failure / slow-call threshold exceeded — requests are short-circuited and the fallback response is served immediately. |
+| 🟡 **HALF-OPEN** | Amber badge | Trial state after the wait duration expires — a limited number of probe requests determine if the service has recovered. |
 
 ---
 
-## 🚦 Circuit Breaker State Reference
+## Simulation Mode
 
-* 🟢 **CLOSED**: Normal operation. Requests pass through directly to downstream services.
-* 🔴 **OPEN**: Failure rate or slow call rate exceeded threshold. Gateway immediately short-circuits requests and serves the cached fallback response.
-* 🟡 **HALF-OPEN**: Trial state after the wait duration expires. Allows a configurable number of test requests to determine if the downstream service has recovered.
+If the API Gateway is not running (e.g., during local UI review), toggle **Simulation Mode** from the dashboard header. This generates mock state transitions, latency spikes, and fallback activations locally so the full UI flow can be demonstrated without a live backend.
