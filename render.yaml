@@ -25,7 +25,6 @@ services:
           type: web
           name: circuit-breaker-eureka
           envVarKey: RENDER_EXTERNAL_URL
-          property: host
 
   # 3. Inventory Service
   - type: web
@@ -42,7 +41,6 @@ services:
           type: web
           name: circuit-breaker-eureka
           envVarKey: RENDER_EXTERNAL_URL
-          property: host
 
   # 4. Recommendation Service
   - type: web
@@ -59,7 +57,6 @@ services:
           type: web
           name: circuit-breaker-eureka
           envVarKey: RENDER_EXTERNAL_URL
-          property: host
 
   # 5. API Gateway
   - type: web
@@ -76,7 +73,6 @@ services:
           type: web
           name: circuit-breaker-eureka
           envVarKey: RENDER_EXTERNAL_URL
-          property: host
 
   # 6. React Monitoring Dashboard (Static Site)
   - type: web
