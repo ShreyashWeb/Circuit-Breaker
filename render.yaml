@@ -73,6 +73,21 @@ services:
           type: web
           name: circuit-breaker-eureka
           envVarKey: RENDER_EXTERNAL_URL
+      - key: PRODUCT_SERVICE_URL
+        fromService:
+          type: web
+          name: circuit-breaker-product
+          envVarKey: RENDER_EXTERNAL_URL
+      - key: INVENTORY_SERVICE_URL
+        fromService:
+          type: web
+          name: circuit-breaker-inventory
+          envVarKey: RENDER_EXTERNAL_URL
+      - key: RECOMMENDATION_SERVICE_URL
+        fromService:
+          type: web
+          name: circuit-breaker-recommendation
+          envVarKey: RENDER_EXTERNAL_URL
 
   # 6. React Monitoring Dashboard (Static Site on Render)
   - type: web
