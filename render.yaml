@@ -1,0 +1,94 @@
+services:
+  # 1. Eureka Discovery Server
+  - type: web
+    name: circuit-breaker-eureka
+    env: docker
+    dockerfilePath: ./Eureka-server/Dockerfile
+    dockerContext: ./Eureka-server
+    plan: free
+    envVars:
+      - key: PORT
+        value: 8761
+
+  # 2. Product Service
+  - type: web
+    name: circuit-breaker-product
+    env: docker
+    dockerfilePath: ./product-service/Dockerfile
+    dockerContext: ./product-service
+    plan: free
+    envVars:
+      - key: PORT
+        value: 8081
+      - key: EUREKA_SERVER_URL
+        fromService:
+          type: web
+          name: circuit-breaker-eureka
+          envVarKey: RENDER_EXTERNAL_URL
+          property: host
+
+  # 3. Inventory Service
+  - type: web
+    name: circuit-breaker-inventory
+    env: docker
+    dockerfilePath: ./inventory-service/Dockerfile
+    dockerContext: ./inventory-service
+    plan: free
+    envVars:
+      - key: PORT
+        value: 8082
+      - key: EUREKA_SERVER_URL
+        fromService:
+          type: web
+          name: circuit-breaker-eureka
+          envVarKey: RENDER_EXTERNAL_URL
+          property: host
+
+  # 4. Recommendation Service
+  - type: web
+    name: circuit-breaker-recommendation
+    env: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: free
+    envVars:
+      - key: PORT
+        value: 8083
+      - key: EUREKA_SERVER_URL
+        fromService:
+          type: web
+          name: circuit-breaker-eureka
+          envVarKey: RENDER_EXTERNAL_URL
+          property: host
+
+  # 5. API Gateway
+  - type: web
+    name: circuit-breaker-gateway
+    env: docker
+    dockerfilePath: ./api-Gateway/Dockerfile
+    dockerContext: ./api-Gateway
+    plan: free
+    envVars:
+      - key: PORT
+        value: 8080
+      - key: EUREKA_SERVER_URL
+        fromService:
+          type: web
+          name: circuit-breaker-eureka
+          envVarKey: RENDER_EXTERNAL_URL
+          property: host
+
+  # 6. React Monitoring Dashboard (Static Site)
+  - type: web
+    name: circuitbreaker-ui
+    env: static
+    rootDir: circuitbreaker-ui
+    buildCommand: npm install && npm run build
+    staticPublishPath: ./dist
+    plan: free
+    envVars:
+      - key: VITE_API_BASE_URL
+        fromService:
+          type: web
+          name: circuit-breaker-gateway
+          envVarKey: RENDER_EXTERNAL_URL
