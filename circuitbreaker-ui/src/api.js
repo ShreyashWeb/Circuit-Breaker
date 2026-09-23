@@ -57,4 +57,19 @@ export const triggerLatency = async (serviceName) => {
   }
 };
 
+/**
+ * Reset a circuit breaker back to CLOSED state
+ */
+export const resetCircuitBreaker = async (serviceName) => {
+  try {
+    return await api.post(`/chaos/reset/${encodeURIComponent(serviceName)}`);
+  } catch (err) {
+    console.warn(`Direct reset on /chaos/reset/${serviceName} failed, sending probe traffic`, err);
+    // Fallback: ping healthy endpoint 3 times to heal it
+    await api.get('/api/recommendations').catch(() => null);
+    await api.get('/api/recommendations').catch(() => null);
+    await api.get('/api/recommendations').catch(() => null);
+  }
+};
+
 export default api;

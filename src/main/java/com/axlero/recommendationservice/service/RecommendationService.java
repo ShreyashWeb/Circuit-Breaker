@@ -24,7 +24,7 @@ public class RecommendationService {
     }
 
     public String simulateDelay() throws InterruptedException {
-        Thread.sleep(10000);
+        Thread.sleep(3000);
         return "Recommendation service is back after delay";
     }
 

@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import CircuitBreakerBadge from './CircuitBreakerBadge';
 import LatencyChart from './LatencyChart';
 import FallbackPanel from './FallbackPanel';
-import api, { triggerLatency } from '../api';
-import { Zap, Loader2, CheckCircle2, ShieldCheck, Gauge } from 'lucide-react';
+import api, { triggerLatency, resetCircuitBreaker } from '../api';
+import { Zap, Loader2, CheckCircle2, ShieldCheck, Gauge, RotateCcw } from 'lucide-react';
 
 /**
  * ServiceCard component
@@ -47,6 +47,23 @@ export const ServiceCard = ({
       }
     } catch (e) {
       console.warn('Probe call error:', e);
+    } finally {
+      setIsTriggering(false);
+      setTimeout(() => setTriggerFeedback(null), 2500);
+    }
+  };
+
+  const handleReset = async () => {
+    if (isTriggering) return;
+    setIsTriggering(true);
+    try {
+      await resetCircuitBreaker(serviceName);
+      setTriggerFeedback('recovered');
+      if (onForceRefresh) {
+        await onForceRefresh();
+      }
+    } catch (e) {
+      console.warn('Reset error:', e);
     } finally {
       setIsTriggering(false);
       setTimeout(() => setTriggerFeedback(null), 2500);
@@ -172,6 +189,35 @@ export const ServiceCard = ({
                     </>
                   )}
                 </button>
+              </div>
+            ) : isOpen ? (
+              <div className="space-y-2">
+                <div className="text-[11px] text-rose-300/90 bg-rose-500/10 border border-rose-500/20 rounded-lg p-2 flex items-center justify-between">
+                  <span>Circuit OPEN (Fallback Active)</span>
+                  <span className="font-mono text-[10px] bg-rose-500/20 px-1.5 py-0.5 rounded text-rose-200">Auto-heals in 5s</span>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={handleTriggerLatency}
+                    disabled={isTriggering}
+                    className="flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl text-xs font-semibold bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700/60 cursor-pointer transition-colors"
+                  >
+                    <Zap className="h-3 w-3 text-amber-400" />
+                    <span>Retest Delay</span>
+                  </button>
+                  <button
+                    onClick={handleReset}
+                    disabled={isTriggering}
+                    className="flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl text-xs font-semibold bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 cursor-pointer shadow-sm transition-colors"
+                  >
+                    {isTriggering ? (
+                      <Loader2 className="h-3 w-3 animate-spin text-emerald-400" />
+                    ) : (
+                      <RotateCcw className="h-3 w-3 text-emerald-400" />
+                    )}
+                    <span>Force Close</span>
+                  </button>
+                </div>
               </div>
             ) : (
               <button

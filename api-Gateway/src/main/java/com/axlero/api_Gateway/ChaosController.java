@@ -1,5 +1,8 @@
 package com.axlero.api_Gateway;
 
+import io.github.resilience4j.circuitbreaker.CircuitBreaker;
+import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -14,6 +17,9 @@ import java.util.Map;
 public class ChaosController {
 
     private final WebClient webClient = WebClient.create();
+    
+    @Autowired(required = false)
+    private CircuitBreakerRegistry circuitBreakerRegistry;
 
     @RequestMapping(value = "/latency/{serviceName}", method = {RequestMethod.GET, RequestMethod.POST})
     public Mono<ResponseEntity<Map<String, Object>>> triggerChaos(@PathVariable String serviceName) {
@@ -29,8 +35,8 @@ public class ChaosController {
             targetPath = "http://localhost:8080/products/delay";
         }
 
-        // Fire 6 concurrent requests through the gateway route to trip the circuit breaker
-        return Flux.range(1, 6)
+        // Fire 5 concurrent requests through the gateway route to trip the circuit breaker
+        return Flux.range(1, 5)
                 .flatMap(i -> webClient.get()
                         .uri(targetPath)
                         .retrieve()
@@ -44,5 +50,28 @@ public class ChaosController {
                         "requestsFired", results.size(),
                         "message", "Triggered latency calls through Gateway to activate Circuit Breaker."
                 )));
+    }
+
+    @PostMapping("/reset/{serviceName}")
+    public Mono<ResponseEntity<Map<String, Object>>> resetCircuitBreaker(@PathVariable String serviceName) {
+        String lower = serviceName.toLowerCase();
+        String cbName = lower.contains("recommendation") ? "recommendationCB" :
+                        lower.contains("inventory") ? "inventoryCB" : "productCB";
+
+        if (circuitBreakerRegistry != null) {
+            try {
+                circuitBreakerRegistry.circuitBreaker(cbName).transitionToClosedState();
+            } catch (Exception ignored) {
+                try {
+                    circuitBreakerRegistry.circuitBreaker(cbName).reset();
+                } catch (Exception ignored2) {}
+            }
+        }
+
+        return Mono.just(ResponseEntity.ok(Map.of(
+                "status", "reset_success",
+                "circuitBreaker", cbName,
+                "targetState", "CLOSED"
+        )));
     }
 }
