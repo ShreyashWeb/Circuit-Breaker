@@ -22,6 +22,16 @@ public class ProductController {
         return productRepository.findAll();
     }
 
+    @GetMapping("/delay")
+    public List<Product> getProductsWithDelay(@RequestParam(defaultValue = "3500") long durationMs) {
+        try {
+            Thread.sleep(durationMs);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+        return productRepository.findAll();
+    }
+
     @GetMapping("/{id}")
     public Product getProductById(
             @PathVariable @NonNull Long id) {

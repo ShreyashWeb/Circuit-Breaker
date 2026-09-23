@@ -47,6 +47,11 @@ export const triggerLatency = async (serviceName) => {
         api.get('/inventory/simulate/delay?durationMs=4000', { timeout: 6000 }).catch(err => err.response || err)
       );
       return Promise.all(requests);
+    } else if (norm.includes('product')) {
+      const requests = Array.from({ length: 6 }, () =>
+        api.get('/products/delay', { timeout: 6000 }).catch(err => err.response || err)
+      );
+      return Promise.all(requests);
     }
     throw new Error(`Latency simulation for ${serviceName} not supported.`);
   }

@@ -1,122 +1,146 @@
-﻿# Circuit Breaker — Full Stack Integration
+# Circuit Breaker — Cloud-Native E-Commerce API Gateway
 
-> A complete microservices demo system built with Spring Boot, Spring Cloud Gateway, Resilience4j, Netflix Eureka, and a React monitoring dashboard.
-
----
-
-## Architecture
-
-```
-React Dashboard (5173)
-        |
-   API Gateway (8080)  ←── Resilience4j Circuit Breaker
-   /        |        \
-Product  Inventory  Recommendation
-(8081)   (8082)      (8083)
-   \        |        /
-      Eureka Server (8761)
-           |
-         MySQL (3306)
-```
+> **Axlero Solutions — Advanced Full-Stack Java Engineering (Project 3)**  
+> A production-grade, fault-tolerant microservices system built with Spring Boot, Spring Cloud Gateway, Resilience4j, Netflix Eureka, Micrometer Tracing with Zipkin, and a real-time React monitoring dashboard.
 
 ---
 
-## Modules
+## Architecture Overview
 
-| Module | Branch | Port | Database |
-| :--- | :--- | :--- | :--- |
-| Eureka Server | `eureka-server` | `8761` | — |
-| API Gateway | `gateway-resilience-(-Uday-)` | `8080` | — |
-| Product Service | `product-service-(-vaibhav)` | `8081` | H2 (in-memory) |
-| Inventory Service | `inventory-service-(-Charu-)` | `8082` | MySQL (`inventory_db`) |
-| Recommendation Service | `recommendation-service-(-Arpitha-)` | `8083` | MySQL (`recommendation_db`) |
-| React Dashboard | `frontend-monitoring-(-Shreyash-)` | `5173` | — |
+```
+                          ┌─────────────────────────────┐
+                          │   React Dashboard (5173)    │
+                          └──────────────┬──────────────┘
+                                         │ HTTP
+                                         ▼
+                     ┌───────────────────────────────────────┐
+                     │          API Gateway (8080)           │
+                     │  • Resilience4j Circuit Breakers      │
+                     │  • Rate Limiting (100 req/s)          │
+                     │  • Bulkhead Concurrency Guards        │
+                     │  • Distributed Tracing Header Baggage │
+                     └───────┬───────────┬───────────┬───────┘
+                             │           │           │
+                 ┌───────────┘           │           └───────────┐
+                 ▼                       ▼                       ▼
+      ┌────────────────────┐  ┌────────────────────┐  ┌─────────────────────┐
+      │  Product Service   │  │ Inventory Service  │  │Recommendation Service│
+      │       (8081)       │  │       (8082)       │  │       (8083)        │
+      │  [Rate Limited]    │  │ [Bulkhead Guarded] │  │  [CB + Fallback]    │
+      └─────────┬──────────┘  └─────────┬──────────┘  └──────────┬──────────┘
+                │                       │                        │
+                └───────────────────────┼────────────────────────┘
+                                        │ Register & Discover
+                                        ▼
+                            ┌───────────────────────┐
+                            │ Eureka Server (8761)  │
+                            └───────────────────────┘
+                                        │
+                         ┌──────────────┴──────────────┐
+                         ▼                             ▼
+              ┌─────────────────────┐       ┌─────────────────────┐
+              │    MySQL (3306)     │       │    Zipkin (9411)    │
+              │  (inventory_db &    │       │ (Distributed Trace  │
+              │ recommendation_db)  │       │     Collector)      │
+              └─────────────────────┘       └─────────────────────┘
+```
+
+---
+
+## Real-World Use Case
+
+During peak traffic events (such as **Black Friday**), downstream non-critical services (like the **Recommendation Engine**) can become overwhelmed and start timing out. Without resilience patterns, slow requests consume connection threads, leading to catastrophic cascading failures across the entire system.
+
+Using **Spring Cloud Gateway** and **Resilience4j**:
+- **Circuit Breaker (`recommendationCB`)**: Monitors timeout and error thresholds.
+- **Fail-Fast & Fallbacks**: When timeouts breach the 50% failure rate, the breaker **opens**, failing requests instantly and returning a cached fallback response (`/fallback/recommendations`).
+- **Core Site Performance**: Critical transactional services (**Product** and **Inventory**) stay fast, protected by **Rate Limiters** and **Bulkheads**.
+- **Self-Healing Recovery**: After 10 seconds, the breaker enters **`HALF_OPEN`**, probes incoming traffic, and automatically returns to **`CLOSED`** upon service recovery.
+
+---
+
+## Microservice Modules & Ports
+
+| Module | Location / Branch | Port | Database | Resilience & Observability |
+| :--- | :--- | :---: | :--- | :--- |
+| **Eureka Server** | `Eureka-server/` | `8761` | — | Service Registry & Discovery |
+| **API Gateway** | `api-Gateway/` | `8080` | — | Resilience4j CB, Rate Limiter, Bulkhead, Micrometer Tracing |
+| **Product Service** | `product-service/` | `8081` | H2 (in-memory) | Rate Limited Route, Micrometer Tracing, Actuator |
+| **Inventory Service** | `inventory-service/` | `8082` | MySQL / H2 | Bulkhead Route, Micrometer Tracing, Zipkin |
+| **Recommendation Service** | `.` (Root project) | `8083` | MySQL / H2 | Circuit Breaker Protected, Chaos Latency Endpoint |
+| **React Dashboard** | `circuitbreaker-ui/` | `5173` | — | Vite + React, Real-time state badges, Chaos trigger |
+| **Zipkin** | Docker container | `9411` | In-memory | Distributed Request Tracing (`/api/v2/spans`) |
 
 ---
 
 ## Prerequisites
 
-- **Java 21+** and **Maven**
-- **Node.js 20+** and **npm**
-- **Docker** (for MySQL — easiest option) OR a local MySQL 8 install
+- **Java 21+** (or Java 25)
+- **Maven 3.9+** (or use included `mvnw.cmd` / `./mvnw`)
+- **Node.js 20+** & **npm**
+- **Docker** (for MySQL & Zipkin) OR local MySQL 8 install
 
 ---
 
-## Quick Start
+## Quick Start Guide
 
-### 1. Start MySQL (via Docker)
+### 1. Start Infrastructure (MySQL & Zipkin)
 
 ```bash
 docker compose up -d
 ```
-
-This creates both `inventory_db` and `recommendation_db` automatically.
-
-> **No Docker?** Create the databases manually in your local MySQL:
-> ```sql
-> CREATE DATABASE inventory_db;
-> CREATE DATABASE recommendation_db;
-> ```
-> Default credentials: `root` / `root`
+> Starts MySQL on port `3306` (with `inventory_db` and `recommendation_db`) and Zipkin on port `9411`.  
+> *(If not using Docker, all Spring microservices automatically fall back to embedded H2 database).*
 
 ---
 
-### 2. Start Eureka Server
+### 2. Start Eureka Server (Port 8761)
 
 ```bash
 cd Eureka-server
-./mvnw spring-boot:run
+.\mvnw.cmd spring-boot:run
 ```
-
-Open [http://localhost:8761](http://localhost:8761) — wait until the dashboard is up before starting other services.
+Open [http://localhost:8761](http://localhost:8761) — wait for the Eureka dashboard to initialize.
 
 ---
 
-### 3. Start Product Service
+### 3. Start Product Service (Port 8081)
 
 ```bash
 cd product-service
-./mvnw spring-boot:run
+.\mvnw.cmd spring-boot:run
 ```
-
-Uses H2 in-memory DB — no setup needed. Runs on port `8081`.
 
 ---
 
-### 4. Start Inventory Service
+### 4. Start Inventory Service (Port 8082)
 
 ```bash
 cd inventory-service
-./mvnw spring-boot:run
+.\mvnw.cmd spring-boot:run
 ```
-
-Connects to MySQL `inventory_db` on port `8082`.
 
 ---
 
-### 5. Start Recommendation Service
+### 5. Start Recommendation Service (Port 8083)
 
 ```bash
-cd recommendation-service
-./mvnw spring-boot:run
+# In the workspace root folder:
+.\mvnw.cmd spring-boot:run
 ```
-
-Connects to MySQL `recommendation_db` on port `8083`.
 
 ---
 
-### 6. Start API Gateway
+### 6. Start API Gateway (Port 8080)
 
 ```bash
 cd api-Gateway
-./mvnw spring-boot:run
+.\mvnw.cmd spring-boot:run
 ```
-
-Runs on port `8080`. All requests to microservices should go through this gateway.
 
 ---
 
-### 7. Start React Dashboard
+### 7. Start React Monitoring Dashboard (Port 5173)
 
 ```bash
 cd circuitbreaker-ui
@@ -124,40 +148,54 @@ npm install
 npm run dev
 ```
 
-Open [http://localhost:5173](http://localhost:5173).
+Open [http://localhost:5173](http://localhost:5173) in your browser.
 
 ---
 
-## Testing the Circuit Breaker
+## Testing & Verifying the Circuit Breaker
 
-1. Open the React dashboard at `http://localhost:5173`
-2. All services should show **CLOSED** (green) — normal operation
-3. Click **Trigger Latency** on the **Recommendation Service** card
-4. Watch the circuit breaker transition: `CLOSED` → `OPEN` (red) → fallback activates
-5. After ~10 seconds, it transitions to `HALF_OPEN` (amber) → probes → back to `CLOSED`
-
----
-
-## Key Endpoints
-
-| Endpoint | Purpose |
-| :--- | :--- |
-| `GET http://localhost:8761` | Eureka dashboard — see registered services |
-| `GET http://localhost:8080/actuator/health` | Aggregated health of all services |
-| `GET http://localhost:8080/actuator/circuitbreakers` | Live circuit breaker states |
-| `GET http://localhost:8080/products` | Product Service via Gateway |
-| `GET http://localhost:8080/inventory` | Inventory Service via Gateway |
-| `GET http://localhost:8080/api/recommendations` | Recommendation Service via Gateway |
-| `POST http://localhost:8080/chaos/latency/recommendation-service` | Inject latency for chaos testing |
+1. Open the React dashboard at [http://localhost:5173](http://localhost:5173).
+2. All services will show **Health: UP** and the Recommendation Service Circuit Breaker badge will display **CLOSED** (Green).
+3. Click the **"Trigger Latency (Chaos Test)"** button on the **Recommendation Service** card:
+   - **Step 1 (`CLOSED` ➔ `OPEN`)**: Gateway injects delay, times out after 2s, and trips the circuit breaker to **`OPEN` (Red)**.
+   - **Step 2 (Instant Fallback)**: The **Fallback Panel** immediately appears, rendering cached fallback data without server timeouts or thread blocking.
+   - **Step 3 (`OPEN` ➔ `HALF_OPEN`)**: After the 10-second wait window (`wait-duration-in-open-state=10s`), the breaker automatically transitions to **`HALF_OPEN` (Amber)**.
+   - **Step 4 (`HALF_OPEN` ➔ `CLOSED`)**: The system sends trial probe requests. Since normal service has resumed, it self-heals back to **`CLOSED` (Green)**.
+4. Throughout the test, notice that **Product Service** and **Inventory Service** remain completely fast and unaffected.
 
 ---
 
-## Team
+## Key Actuator & Gateway Endpoints
 
-| Member | Module |
-| :--- | :--- |
-| Vaibhav | Product Service |
-| Charu | Inventory Service |
-| Arpitha | Recommendation Service |
-| Uday | API Gateway + Resilience4j |
-| Shreyash | React Dashboard |
+| Endpoint | Method | Description |
+| :--- | :---: | :--- |
+| `http://localhost:8761` | `GET` | Eureka Server Discovery Dashboard |
+| `http://localhost:8080/actuator/health` | `GET` | Aggregated microservice health via Gateway |
+| `http://localhost:8080/actuator/circuitbreakers` | `GET` | Live Resilience4j Circuit Breaker states (`recommendationCB`) |
+| `http://localhost:8080/actuator/ratelimiters` | `GET` | Resilience4j Rate Limiter metrics and configurations |
+| `http://localhost:8080/actuator/bulkheads` | `GET` | Resilience4j Bulkhead concurrent call metrics |
+| `http://localhost:8080/products` | `GET` | Products routed via Gateway to Product Service |
+| `http://localhost:8080/inventory/1` | `GET` | Inventory routed via Gateway to Inventory Service |
+| `http://localhost:8080/api/recommendations` | `GET` | Recommendations routed via Gateway (CB protected) |
+| `http://localhost:8080/chaos/latency/recommendation-service` | `POST` | Injects latency to test Circuit Breaker trip & recovery |
+| `http://localhost:9411` | `GET` | Zipkin UI for Distributed Request Tracing |
+
+---
+
+## Project Specification Alignment (Axlero)
+
+- **Week 1**: 3 Spring Boot microservices (`Product`, `Inventory`, `Recommendation`) + Eureka Service Registry + Spring Cloud Gateway routing.
+- **Week 2**: Resilience4j Circuit Breaker with timeout and fallback on Recommendation Service + React monitoring UI.
+- **Mid-Project Review**: Routing audit and chaos simulation with fallback data.
+- **Week 3**: Advanced Resilience (**Rate Limiting** to prevent scraping/DDoS and **Bulkheads** for thread pool isolation) + State Visualization in React.
+- **Week 4**: **Distributed Tracing** (Micrometer Tracing + Zipkin) across all services + UI "Trigger Latency" chaos testing.
+
+---
+
+## Team Responsibilities
+
+- **Member 1 (Vaibhav)** — Product Service
+- **Member 2 (Charu)** — Inventory Service
+- **Member 3 (Arpitha)** — Recommendation Service
+- **Member 4 (Uday)** — API Gateway & Resilience4j
+- **Member 5 (Shreyash)** — Frontend Monitoring Dashboard & Full Integration

@@ -15,16 +15,18 @@ public class ChaosController {
 
     private final WebClient webClient = WebClient.create();
 
-    @PostMapping("/latency/{serviceName}")
-    @GetMapping("/latency/{serviceName}")
+    @RequestMapping(value = "/latency/{serviceName}", method = {RequestMethod.GET, RequestMethod.POST})
     public Mono<ResponseEntity<Map<String, Object>>> triggerChaos(@PathVariable String serviceName) {
         String targetPath;
-        if (serviceName.toLowerCase().contains("recommendation")) {
+        String lower = serviceName.toLowerCase();
+        if (lower.contains("recommendation")) {
             targetPath = "http://localhost:8080/api/recommendations/delay";
-        } else if (serviceName.toLowerCase().contains("inventory")) {
+        } else if (lower.contains("inventory")) {
             targetPath = "http://localhost:8080/inventory/simulate/delay?durationMs=4000";
+        } else if (lower.contains("product")) {
+            targetPath = "http://localhost:8080/products/delay";
         } else {
-            targetPath = "http://localhost:8080/products";
+            targetPath = "http://localhost:8080/products/delay";
         }
 
         // Fire 6 concurrent requests through the gateway route to trip the circuit breaker

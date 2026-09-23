@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import ServiceCard from '../components/ServiceCard';
 import { Server, AlertTriangle, ShieldCheck, Heart, RefreshCw, Activity } from 'lucide-react';
-import { getServiceHealth, getCircuitBreakerStates } from '../api';
+import api, { getServiceHealth, getCircuitBreakerStates } from '../api';
 import useCircuitBreakerHistory from '../hooks/useCircuitBreakerHistory';
 
 // Helper to generate initial mock latency history
@@ -204,9 +204,11 @@ export const Dashboard = () => {
 
     // Live backend mode
     try {
+      // Also ping the recommendation route to act as live traffic for probe calls during HALF_OPEN
       const [healthRes, cbRes] = await Promise.all([
         getServiceHealth(),
-        getCircuitBreakerStates()
+        getCircuitBreakerStates(),
+        api.get('/api/recommendations').catch(() => null)
       ]);
 
       const healthData = healthRes.data;
