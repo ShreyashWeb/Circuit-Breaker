@@ -141,6 +141,7 @@ export const Dashboard = () => {
   const { recordTransition } = useCircuitBreakerHistory();
   const prevCBStatesRef = useRef({});
   const isFirstFetchRef = useRef(true);
+  const halfOpenTimerRef = useRef(null);
 
   // Polling function
   const fetchServiceData = useCallback(async () => {
@@ -204,31 +205,38 @@ export const Dashboard = () => {
 
     // Live backend mode
     try {
-      // Also ping the recommendation route to act as live traffic for probe calls during HALF_OPEN
       const [healthRes, cbRes] = await Promise.all([
         getServiceHealth(),
-        getCircuitBreakerStates(),
-        api.get('/api/recommendations').catch(() => null)
+        getCircuitBreakerStates()
       ]);
 
       const healthData = healthRes.data;
-      let cbData = cbRes.data;
+      const cbData = cbRes.data;
 
-      // When HALF_OPEN is detected, automatically send 3 normal probe requests so Resilience4j recovers to CLOSED
+      // When HALF_OPEN is detected, display HALF_OPEN visibly on screen for ~4.5s
+      // before auto-probing, giving the user time to see the state or click recovery button
       const anyHalfOpen = cbData?.circuitBreakers && Object.values(cbData.circuitBreakers).some(
         cb => (typeof cb === 'string' ? cb : cb?.state) === 'HALF_OPEN'
       );
       if (anyHalfOpen) {
-        try {
-          await api.get('/api/recommendations');
-          await api.get('/api/recommendations');
-          await api.get('/api/recommendations');
-          const refreshedCb = await getCircuitBreakerStates();
-          if (refreshedCb?.data) {
-            cbData = refreshedCb.data;
-          }
-        } catch (e) {
-          console.warn('Auto-healing probe calls:', e);
+        if (!halfOpenTimerRef.current) {
+          halfOpenTimerRef.current = setTimeout(async () => {
+            try {
+              await api.get('/api/recommendations');
+              await api.get('/api/recommendations');
+              await api.get('/api/recommendations');
+            } catch (e) {
+              console.warn('Auto-healing probe calls:', e);
+            } finally {
+              halfOpenTimerRef.current = null;
+              fetchServiceData();
+            }
+          }, 4500);
+        }
+      } else {
+        if (halfOpenTimerRef.current) {
+          clearTimeout(halfOpenTimerRef.current);
+          halfOpenTimerRef.current = null;
         }
       }
 
@@ -280,7 +288,13 @@ export const Dashboard = () => {
       fetchServiceData();
     }, 3000);
 
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      if (halfOpenTimerRef.current) {
+        clearTimeout(halfOpenTimerRef.current);
+        halfOpenTimerRef.current = null;
+      }
+    };
   }, [fetchServiceData]);
 
   // Compute stats
