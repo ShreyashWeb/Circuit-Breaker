@@ -75,13 +75,11 @@ services:
           envVarKey: RENDER_EXTERNAL_URL
 
   # 6. React Monitoring Dashboard (Static Site)
-  - type: web
+  - type: static_site
     name: circuitbreaker-ui
-    env: static
     rootDir: circuitbreaker-ui
     buildCommand: npm install && npm run build
     staticPublishPath: ./dist
-    plan: free
     envVars:
       - key: VITE_API_BASE_URL
         fromService:
