@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import CircuitBreakerBadge from './CircuitBreakerBadge';
 import LatencyChart from './LatencyChart';
 import FallbackPanel from './FallbackPanel';
-import { triggerLatency } from '../api';
+import api, { triggerLatency } from '../api';
 import { Zap, Loader2, CheckCircle2, ShieldCheck, Gauge } from 'lucide-react';
 
 /**
@@ -28,9 +28,25 @@ export const ServiceCard = ({
   const isInventory = (serviceName || '').toLowerCase().includes('inventory');
   const isProduct = (serviceName || '').toLowerCase().includes('product');
   const isOpen = (circuitBreakerState || '').toUpperCase() === 'OPEN';
+  const isHalfOpen = (circuitBreakerState || '').toUpperCase() === 'HALF_OPEN';
 
   const [isTriggering, setIsTriggering] = useState(false);
-  const [triggerFeedback, setTriggerFeedback] = useState(null); // 'success' | 'stubbed' | null
+  const [triggerFeedback, setTriggerFeedback] = useState(null); // 'success' | 'stubbed' | 'recovered' | null
+
+  const handleRecover = async () => {
+    if (isTriggering) return;
+    setIsTriggering(true);
+    try {
+      await api.get('/api/recommendations');
+      await api.get('/api/recommendations');
+      setTriggerFeedback('recovered');
+    } catch (e) {
+      console.warn('Probe call error:', e);
+    } finally {
+      setIsTriggering(false);
+      setTimeout(() => setTriggerFeedback(null), 2500);
+    }
+  };
 
   // Determine health dot classes
   let dotColorClass = 'bg-slate-500 shadow-slate-500/50';
@@ -123,41 +139,52 @@ export const ServiceCard = ({
       <div className="mt-6 space-y-4">
         {isRecommendation ? (
           <div>
-            <button
-              onClick={handleTriggerLatency}
-              disabled={isTriggering}
-              className={`w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-semibold tracking-wide transition-all duration-200 cursor-pointer shadow-md disabled:cursor-not-allowed ${
-                isTriggering
-                  ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-                  : triggerFeedback === 'success'
-                  ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                  : triggerFeedback === 'stubbed'
-                  ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30'
-                  : 'bg-slate-800/80 hover:bg-amber-500/20 hover:text-amber-200 text-slate-200 border border-slate-700/60 hover:border-amber-500/40 hover:shadow-amber-500/10'
-              }`}
-            >
-              {isTriggering ? (
-                <>
-                  <Loader2 className="h-3.5 w-3.5 animate-spin text-amber-400" />
-                  <span>Injecting Latency...</span>
-                </>
-              ) : triggerFeedback === 'success' ? (
-                <>
-                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
-                  <span>Latency Triggered!</span>
-                </>
-              ) : triggerFeedback === 'stubbed' ? (
-                <>
-                  <Zap className="h-3.5 w-3.5 text-indigo-400" />
-                  <span>Trigger Injected (Stub)</span>
-                </>
-              ) : (
-                <>
-                  <Zap className="h-3.5 w-3.5 text-amber-400 group-hover:text-amber-300 transition-colors" />
-                  <span>Trigger Latency (Chaos Test)</span>
-                </>
-              )}
-            </button>
+            {isHalfOpen ? (
+              <button
+                onClick={handleRecover}
+                disabled={isTriggering}
+                className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-semibold tracking-wide transition-all duration-200 cursor-pointer shadow-md bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-emerald-500/20 hover:text-emerald-300 hover:border-emerald-500/40"
+              >
+                <Loader2 className="h-3.5 w-3.5 animate-spin text-amber-400" />
+                <span>Self-Healing (Click to Close Circuit)</span>
+              </button>
+            ) : (
+              <button
+                onClick={handleTriggerLatency}
+                disabled={isTriggering}
+                className={`w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-semibold tracking-wide transition-all duration-200 cursor-pointer shadow-md disabled:cursor-not-allowed ${
+                  isTriggering
+                    ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                    : triggerFeedback === 'success'
+                    ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                    : triggerFeedback === 'stubbed'
+                    ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30'
+                    : 'bg-slate-800/80 hover:bg-amber-500/20 hover:text-amber-200 text-slate-200 border border-slate-700/60 hover:border-amber-500/40 hover:shadow-amber-500/10'
+                }`}
+              >
+                {isTriggering ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 animate-spin text-amber-400" />
+                    <span>Injecting Latency...</span>
+                  </>
+                ) : triggerFeedback === 'success' ? (
+                  <>
+                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
+                    <span>Latency Triggered!</span>
+                  </>
+                ) : triggerFeedback === 'stubbed' ? (
+                  <>
+                    <Zap className="h-3.5 w-3.5 text-indigo-400" />
+                    <span>Trigger Injected (Stub)</span>
+                  </>
+                ) : (
+                  <>
+                    <Zap className="h-3.5 w-3.5 text-amber-400 group-hover:text-amber-300 transition-colors" />
+                    <span>Trigger Latency (Chaos Test)</span>
+                  </>
+                )}
+              </button>
+            )}
           </div>
         ) : (
           <div className="w-full py-2 px-3 rounded-xl bg-slate-800/40 border border-slate-800/60 flex items-center justify-center gap-2 text-[11px] text-slate-400">

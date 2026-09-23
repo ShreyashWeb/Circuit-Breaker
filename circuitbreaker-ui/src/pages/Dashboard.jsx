@@ -214,6 +214,17 @@ export const Dashboard = () => {
       const healthData = healthRes.data;
       const cbData = cbRes.data;
 
+      // When HALF_OPEN is detected, automatically send 2 normal probe requests so Resilience4j recovers to CLOSED
+      const anyHalfOpen = cbData?.circuitBreakers && Object.values(cbData.circuitBreakers).some(
+        cb => (typeof cb === 'string' ? cb : cb?.state) === 'HALF_OPEN'
+      );
+      if (anyHalfOpen) {
+        Promise.all([
+          api.get('/api/recommendations').catch(() => null),
+          api.get('/api/recommendations').catch(() => null)
+        ]);
+      }
+
       setServices(prev => {
         const nextStates = {};
         const updated = prev.map(s => {
