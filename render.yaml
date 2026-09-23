@@ -74,9 +74,10 @@ services:
           name: circuit-breaker-eureka
           envVarKey: RENDER_EXTERNAL_URL
 
-  # 6. React Monitoring Dashboard (Static Site)
-  - type: static_site
+  # 6. React Monitoring Dashboard (Static Site on Render)
+  - type: web
     name: circuitbreaker-ui
+    env: static
     rootDir: circuitbreaker-ui
     buildCommand: npm install && npm run build
     staticPublishPath: ./dist
