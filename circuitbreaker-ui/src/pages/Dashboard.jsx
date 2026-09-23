@@ -212,17 +212,24 @@ export const Dashboard = () => {
       ]);
 
       const healthData = healthRes.data;
-      const cbData = cbRes.data;
+      let cbData = cbRes.data;
 
-      // When HALF_OPEN is detected, automatically send 2 normal probe requests so Resilience4j recovers to CLOSED
+      // When HALF_OPEN is detected, automatically send 3 normal probe requests so Resilience4j recovers to CLOSED
       const anyHalfOpen = cbData?.circuitBreakers && Object.values(cbData.circuitBreakers).some(
         cb => (typeof cb === 'string' ? cb : cb?.state) === 'HALF_OPEN'
       );
       if (anyHalfOpen) {
-        Promise.all([
-          api.get('/api/recommendations').catch(() => null),
-          api.get('/api/recommendations').catch(() => null)
-        ]);
+        try {
+          await api.get('/api/recommendations');
+          await api.get('/api/recommendations');
+          await api.get('/api/recommendations');
+          const refreshedCb = await getCircuitBreakerStates();
+          if (refreshedCb?.data) {
+            cbData = refreshedCb.data;
+          }
+        } catch (e) {
+          console.warn('Auto-healing probe calls:', e);
+        }
       }
 
       setServices(prev => {
@@ -400,6 +407,7 @@ export const Dashboard = () => {
               lastChecked={service.lastChecked}
               circuitBreakerState={service.circuitBreakerState}
               latencyHistory={service.latencyHistory}
+              onForceRefresh={fetchServiceData}
             />
           ))}
         </div>

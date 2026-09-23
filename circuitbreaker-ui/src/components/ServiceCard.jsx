@@ -22,6 +22,7 @@ export const ServiceCard = ({
   lastChecked,
   circuitBreakerState,
   latencyHistory,
+  onForceRefresh,
 }) => {
   const normalizedStatus = (status || '').toUpperCase();
   const isRecommendation = (serviceName || '').toLowerCase().includes('recommendation');
@@ -39,7 +40,11 @@ export const ServiceCard = ({
     try {
       await api.get('/api/recommendations');
       await api.get('/api/recommendations');
+      await api.get('/api/recommendations');
       setTriggerFeedback('recovered');
+      if (onForceRefresh) {
+        await onForceRefresh();
+      }
     } catch (e) {
       console.warn('Probe call error:', e);
     } finally {
@@ -140,14 +145,34 @@ export const ServiceCard = ({
         {isRecommendation ? (
           <div>
             {isHalfOpen ? (
-              <button
-                onClick={handleRecover}
-                disabled={isTriggering}
-                className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-semibold tracking-wide transition-all duration-200 cursor-pointer shadow-md bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-emerald-500/20 hover:text-emerald-300 hover:border-emerald-500/40"
-              >
-                <Loader2 className="h-3.5 w-3.5 animate-spin text-amber-400" />
-                <span>Self-Healing (Click to Close Circuit)</span>
-              </button>
+              <div className="space-y-2">
+                <div className="text-[11px] text-amber-300/90 bg-amber-500/10 border border-amber-500/20 rounded-lg p-2 flex items-center justify-between">
+                  <span>Testing recovery (needs probe calls)</span>
+                  <span className="font-mono text-[10px] bg-amber-500/20 px-1.5 py-0.5 rounded text-amber-200">Auto-probing</span>
+                </div>
+                <button
+                  onClick={handleRecover}
+                  disabled={isTriggering}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-semibold tracking-wide transition-all duration-200 cursor-pointer shadow-md bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-emerald-500/20 hover:text-emerald-300 hover:border-emerald-500/40"
+                >
+                  {isTriggering ? (
+                    <>
+                      <Loader2 className="h-3.5 w-3.5 animate-spin text-amber-400" />
+                      <span>Sending Probes & Closing...</span>
+                    </>
+                  ) : triggerFeedback === 'recovered' ? (
+                    <>
+                      <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
+                      <span>Circuit Closed!</span>
+                    </>
+                  ) : (
+                    <>
+                      <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" />
+                      <span>Send Recovery Probes (Close Circuit)</span>
+                    </>
+                  )}
+                </button>
+              </div>
             ) : (
               <button
                 onClick={handleTriggerLatency}
