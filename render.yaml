@@ -1,7 +1,7 @@
 services:
   # 1. Eureka Discovery Server
   - type: web
-    name: circuit-breaker-eureka
+    name: cb-shreyash-eureka
     env: docker
     dockerfilePath: ./Eureka-server/Dockerfile
     dockerContext: ./Eureka-server
@@ -12,7 +12,7 @@ services:
 
   # 2. Product Service
   - type: web
-    name: circuit-breaker-product
+    name: cb-shreyash-product
     env: docker
     dockerfilePath: ./product-service/Dockerfile
     dockerContext: ./product-service
@@ -23,12 +23,12 @@ services:
       - key: EUREKA_SERVER_URL
         fromService:
           type: web
-          name: circuit-breaker-eureka
+          name: cb-shreyash-eureka
           envVarKey: RENDER_EXTERNAL_URL
 
   # 3. Inventory Service
   - type: web
-    name: circuit-breaker-inventory
+    name: cb-shreyash-inventory
     env: docker
     dockerfilePath: ./inventory-service/Dockerfile
     dockerContext: ./inventory-service
@@ -39,12 +39,12 @@ services:
       - key: EUREKA_SERVER_URL
         fromService:
           type: web
-          name: circuit-breaker-eureka
+          name: cb-shreyash-eureka
           envVarKey: RENDER_EXTERNAL_URL
 
   # 4. Recommendation Service
   - type: web
-    name: circuit-breaker-recommendation
+    name: cb-shreyash-recommendation
     env: docker
     dockerfilePath: ./Dockerfile
     dockerContext: .
@@ -55,12 +55,12 @@ services:
       - key: EUREKA_SERVER_URL
         fromService:
           type: web
-          name: circuit-breaker-eureka
+          name: cb-shreyash-eureka
           envVarKey: RENDER_EXTERNAL_URL
 
   # 5. API Gateway
   - type: web
-    name: circuit-breaker-gateway
+    name: cb-shreyash-gateway
     env: docker
     dockerfilePath: ./api-Gateway/Dockerfile
     dockerContext: ./api-Gateway
@@ -71,12 +71,12 @@ services:
       - key: EUREKA_SERVER_URL
         fromService:
           type: web
-          name: circuit-breaker-eureka
+          name: cb-shreyash-eureka
           envVarKey: RENDER_EXTERNAL_URL
 
-  # 6. React Monitoring Dashboard (Static Site on Render)
+  # 6. React Monitoring Dashboard (Static Site)
   - type: web
-    name: circuitbreaker-ui
+    name: cb-shreyash-ui
     env: static
     rootDir: circuitbreaker-ui
     buildCommand: npm install && npm run build
@@ -85,5 +85,5 @@ services:
       - key: VITE_API_BASE_URL
         fromService:
           type: web
-          name: circuit-breaker-gateway
+          name: cb-shreyash-gateway
           envVarKey: RENDER_EXTERNAL_URL
